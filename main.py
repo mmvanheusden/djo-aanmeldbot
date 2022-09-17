@@ -1,48 +1,16 @@
 #!/usr/bin/env python
 
-# pylint: disable=unused-argument, wrong-import-position
-
-# This program is dedicated to the public domain under the CC0 license.
-
-
 """
-
-Basic example for a bot that uses inline keyboards. For an in-depth explanation, check out
-
- https://github.com/python-telegram-bot/python-telegram-bot/wiki/InlineKeyboard-Example.
-
+Please set the 'telegram_token' as an environment variable
 """
 
 import logging
 import os
-from datetime import date
 
 from idp_renew.auth import *
 from idp_renew.register import Register
 
-from telegram import __version__ as TG_VER
-
-try:
-
-    from telegram import __version_info__
-
-except ImportError:
-
-    __version_info__ = (0, 0, 0, 0, 0)  # type: ignore[assignment]
-
-if __version_info__ < (20, 0, 0, "alpha", 1):
-    raise RuntimeError(
-
-        f"This example is not compatible with your current PTB version {TG_VER}. To view the "
-
-        f"{TG_VER} version of this example, "
-
-        f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
-
-    )
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
 
 # Enable logging
@@ -56,68 +24,98 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def login(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Explains how to use the bot."""
+
+    if len(context.args) != 2:
+        await update.message.reply_text("Gebruik /login <email> <wachtwoord> om in te loggen")
+    else:
+        # Get the username and password from the message
+        username, password = update.message.text.split(" ")[1:]
+
+        # Save the username and password in the user_data
+        context.user_data[update.effective_chat.id] = [username, password]
+
+        await update.message.reply_text("Je bent ingelogd!")
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends a message with three inline buttons attached."""
+    """Sends a message with the date buttons."""
 
-    keyboard = [
-        [InlineKeyboardButton("Aanmelden", callback_data="3")]
-    ]
+    # Check if the user is logged in
+    if update.effective_chat.id not in context.user_data:
+        await update.message.reply_text("Je bent niet ingelogd! gebruik /login <email> <wachtwoord> om in te loggen.")
+        return
+    else:
+        keyboard = [
+            [
+                InlineKeyboardButton("Vrijdag", callback_data="vrijdag"),
+                InlineKeyboardButton("Zaterdag", callback_data="zaterdag"),
+            ],
+        ]
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Meld je aan", reply_markup=reply_markup)
+        await update.message.reply_text("Meld je aan", reply_markup=reply_markup)
 
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Parses the CallbackQuery and updates the message text."""
+    """This code runs when one of the buttons are clicked."""
 
     query = update.callback_query
-
-    # CallbackQueries need to be answered, even if no notification to the user is needed
-
-    # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
-
-    print("klik")
-
-    user = AuthUser(os.getenv("djo_user"), os.getenv("djo_pass"))
+    user = AuthUser(context.user_data[update.effective_chat.id][0], context.user_data[update.effective_chat.id][1])
+    # user = AuthUser(os.getenv("djo_user"), os.getenv("djo_pass"))
 
     server = AuthServer(user)
     register = Register(server)
 
-    server.authenticate()
+    try:
+        server.authenticate()
+    except Exception as e:
+        await query.edit_message_text("Je gebruikersnaam of wachtwoord is niet correct! pas het aan met /login")
+        # await query.message.reply_markdown(f" Debug:\n`{str(e)}`")
+        return
+
     pods = register.pods()
 
     for pod in pods:
-        # exceptions to registering
-        # print(pod.name)
-        # print(dir(pod))
-        print(pod.pod)
-
         if not pod.available or pod.closed:
-            print("niet beschikbaar of gesloteb")
+            print("Niet beschikbaar of gesloten")
             continue
 
         if pod.available == 0:
-            print("niet beschikbaar")
+            print("Niet beschikbaar")
             continue
 
-        if pod.pod == "e":
-            # try to register
-            try:
-                pod.register()
-                print("aangemeld")
-            except:
-                print("aanmeld error")
+        if query.data == "vrijdag":
+            if pod.pod == "e":
+                # try to register
+                try:
+                    pod.register()
+                    print("Aangemeld voor Vrijdag")
+                except:
+                    print("Error bij aanmelden voor Vrijdag")
+        else:
+            if pod.pod == "m":
+                # try to register
+                try:
+                    pod.register()
+                    print("Aangemeld voor Zaterdag")
+                except:
+                    print("Error bij aanmelden voor Zaterdag")
 
     await query.answer()
-
-    await query.edit_message_text(text=f"Je bent aangemeld.")
+    await query.edit_message_text(text=f"Je bent aangemeld voor {query.data.capitalize()}.")
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Displays info on how to use the bot."""
 
-    await update.message.reply_text("Use /start to test this bot.")
+    await update.message.reply_markdown_v2("""
+    *__DJO Aanmelden__*
+*Gebruik /login \<email\> \<wachtwoord\> om in te loggen*
+*Gebruik /start om je aan te melden*
+    """)
 
 
 def main() -> None:
@@ -133,8 +131,9 @@ def main() -> None:
 
     application.add_handler(CommandHandler("help", help_command))
 
-    # Run the bot until the user presses Ctrl-C
+    application.add_handler(CommandHandler("login", login))
 
+    # Run the bot until the user presses Ctrl-C
     application.run_polling()
 
 
