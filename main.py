@@ -170,7 +170,7 @@ def main() -> None:
     # Create the Application and pass it your bot's token.
 
     persistence = PicklePersistence(filepath="aanmeldbot")
-    application = Application.builder().token(os.getenv("telegram_token")).persistence(persistence).build()
+    application = Application.builder().token(os.getenv("BOT_TOKEN")).persistence(persistence).build()
 
     application.add_handler(CommandHandler(("start", "help"), start))
     application.add_handler(CommandHandler("aanmelden", aanmelden))
