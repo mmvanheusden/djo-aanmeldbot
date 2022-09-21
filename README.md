@@ -1,7 +1,7 @@
 # DJO aanmeldbot
 
 <p align="center">
-    <img src="img.png" style="border-radius: 10px" alt="DJO Aanmeldbot" width="300"/>
+    <img src="img.png" alt="DJO Aanmeldbot" width="300"/>
 </p>
 
 Made using [idp-renew](https://github.com/wipeautcrafter/idp-renew) and [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
@@ -35,5 +35,5 @@ You can append it to your venv/bin/activate file to make it persistent.
 
 Then run the bot:
 ```bash
-$ python3 main.py
+python3 main.py
 ```
