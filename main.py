@@ -16,18 +16,16 @@ from idp_renew.register import Register
 # Enable logging
 
 logging.basicConfig(
-
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-
 )
 
 logger = logging.getLogger(__name__)
 
 
 async def login(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Explains how to use the bot."""
+    """Log in to the bot using DJO credentials."""
 
-    # Check if the user_data is empty
+    # Check if the user is already logged in
     if update.effective_chat.id not in context.user_data:
         if len(context.args) != 2:
             await update.message.reply_text("Gebruik /login <email> <wachtwoord> om in te loggen")
@@ -56,7 +54,7 @@ async def logout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def aanmelden(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends a message with the date buttons."""
+    """Sends a message with the aanmeld buttons."""
 
     # Check if the user is logged in
     if update.effective_chat.id not in context.user_data:
@@ -76,7 +74,7 @@ async def aanmelden(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def afmelden(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends a message with the date buttons."""
+    """Sends a message with the afmeld buttons."""
 
     # Check if the user is logged in
     if update.effective_chat.id not in context.user_data:
@@ -100,7 +98,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     query = update.callback_query
     user = AuthUser(context.user_data[update.effective_chat.id][0], context.user_data[update.effective_chat.id][1])
-    # user = AuthUser(os.getenv("djo_user"), os.getenv("djo_pass"))
 
     server = AuthServer(user)
     register = Register(server)
@@ -110,7 +107,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as e:
         await query.edit_message_text(
             "Je gebruikersnaam of wachtwoord is niet correct! pas het aan met /login <email> <wachtwoord>")
-        # await query.message.reply_markdown(f" Debug:\n`{str(e)}`")
         return
 
     pods = register.pods()
